@@ -36,7 +36,21 @@ exploring the data, and getting acquainted with the 3 tables. */
 Write a SQL query to produce a list of the names of the facilities that do. */
 
 
+ANSWER 1:
+
+SELECT name FROM Facilities WHERE membercost = 0;
+
+
+
 /* Q2: How many facilities do not charge a fee to members? */
+
+
+ANSWER 2:
+
+SELECT COUNT(*) FROM Facilities WHERE membercost = 0;
+
+--Answer: 4
+
 
 
 /* Q3: Write an SQL query to show a list of facilities that charge a fee to members,
@@ -45,8 +59,26 @@ Return the facid, facility name, member cost, and monthly maintenance of the
 facilities in question. */
 
 
+ANSWER 3:
+
+SELECT facid, name, membercost, monthlymaintenance FROM Facilities WHERE membercost != 0 AND membercost < .2*(monthlymaintenance);
+
+--The member cost for facilities that do cost members is less than 20% of the respective facility for ALL 5 facilities that charge members
+
+
+
+
 /* Q4: Write an SQL query to retrieve the details of facilities with ID 1 and 5.
 Try writing the query without using the OR operator. */
+
+
+ANSWER 4: 
+
+SELECT * FROM Facilities WHERE facid IN (1,5);
+
+--IN function is a quicker alternative to OR
+
+
 
 
 /* Q5: Produce a list of facilities, with each labelled as
@@ -55,8 +87,63 @@ more than $100. Return the name and monthly maintenance of the facilities
 in question. */
 
 
+ANSWER 5:
+
+SELECT name, monthlymaintenance,
+CASE WHEN monthlymaintenance < 100 THEN 'cheap'
+ELSE 'expensive'
+END AS maintenance_costliness
+FROM `Facilities`;
+
+--utilized CASEs
+
+
+
+
 /* Q6: You'd like to get the first and last name of the last member(s)
 who signed up. Try not to use the LIMIT clause for your solution. */
+
+
+ANSWER 6:
+
+SELECT firstname, surname, MAX(joindate)
+FROM Members;
+
+--Also tried:
+
+SELECT firstname, surname,
+RANK() OVER(ORDER BY joindate DESC) AS joindate_rank
+FROM Members;
+
+SELECT firstname, surname,
+FROM Members
+WHERE joindate = MAX(joindate);
+
+
+SELECT firstname, surname,
+FROM Members
+WHERE joindate =
+(SELECT MAX(joindate)
+ FROM Members);
+
+
+SELECT firstname, surname,
+FROM Members
+WHERE joindate IN
+(SELECT MAX(joindate)
+ FROM Members);
+
+
+SELECT firstname, surname,
+FROM Members
+WHERE joindate =
+(SELECT MAX(joindate)
+ FROM Members
+GROUP BY joindate);
+
+
+
+
 
 
 /* Q7: Produce a list of all members who have used a tennis court.
