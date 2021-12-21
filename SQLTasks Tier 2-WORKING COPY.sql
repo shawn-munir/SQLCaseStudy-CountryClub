@@ -93,7 +93,7 @@ SELECT name, monthlymaintenance,
 CASE WHEN monthlymaintenance < 100 THEN 'cheap'
 ELSE 'expensive'
 END AS maintenance_costliness
-FROM `Facilities`;
+FROM Facilities;
 
 --utilized CASEs
 
@@ -109,8 +109,9 @@ ANSWER 6:
 SELECT firstname, surname, MAX(joindate)
 FROM Members;
 
---Also tried:
+--Also tried, but got errors:
 
+/*
 SELECT firstname, surname,
 RANK() OVER(ORDER BY joindate DESC) AS joindate_rank
 FROM Members;
@@ -118,6 +119,10 @@ FROM Members;
 SELECT firstname, surname,
 FROM Members
 WHERE joindate = MAX(joindate);
+
+SELECT firstname, surname,
+FROM Members
+WHERE joindate IN MAX(joindate);
 
 
 SELECT firstname, surname,
@@ -132,17 +137,7 @@ FROM Members
 WHERE joindate IN
 (SELECT MAX(joindate)
  FROM Members);
-
-
-SELECT firstname, surname,
-FROM Members
-WHERE joindate =
-(SELECT MAX(joindate)
- FROM Members
-GROUP BY joindate);
-
-
-
+*/
 
 
 
@@ -150,6 +145,31 @@ GROUP BY joindate);
 Include in your output the name of the court, and the name of the member
 formatted as a single column. Ensure no duplicate data, and order by
 the member name. */
+
+
+ANSWER 7:
+
+SELECT DISTINCT CONCAT(firstname, surname) AS member_full_name, Facilities.name
+FROM Bookings
+JOIN Members USING(memid)
+JOIN Facilities USING(facid)
+WHERE Facilities.name LIKE('Tennis%')
+ORDER BY member_full_name;
+
+
+--This kept giving errors (Error in Processing Request, Error code: 403, Error text: error'). Doesn't seem to like CONCAT?
+
+
+--So best could do that worked was this:
+
+SELECT DISTINCT firstname, surname, Facilities.name AS facility
+FROM Bookings
+JOIN Members USING(memid)
+JOIN Facilities USING(facid)
+WHERE Facilities.name LIKE('Tennis%')
+ORDER BY surname, facility;
+
+
 
 
 /* Q8: Produce a list of bookings on the day of 2012-09-14 which
@@ -160,7 +180,72 @@ facility, the name of the member formatted as a single column, and the cost.
 Order by descending cost, and do not use any subqueries. */
 
 
+ANSWER 8:
+
+SELECT CONCAT(firstname, surname) AS member_full_name, Facilities.name AS facility
+CASE WHEN memid = 0 THEN 'guest'
+ELSE 'member'
+END AS person_type,
+CASE WHEN memid = 0 THEN guestcost
+ELSE membercost
+END AS cost
+FROM Bookings
+JOIN Members USING(memid)
+JOIN Facilities USING(facid)
+WHERE DATE(Bookings.starttime) = '2012-09-14'
+	  AND ((memid = 0 AND guestcost > 30)
+	  OR   (memid != 0 AND membercost > 30))
+ORDER BY cost DESC;
+
+--NOTE - really dont need the last piece to check for places where the member cost is > $30 because there ARE NO cases where the facility cost for members is ever over 30, or even close to 30! highest is < $10
+--Also, the only thing that even costs guest over 30 are the Massage Rooms
+
+--Again errors with this^. Modified to work:
+
+SELECT firstname, surname, Facilities.name AS facility,
+CASE WHEN memid = 0 THEN 'guest'
+ELSE 'member'
+END AS person_type,
+CASE WHEN memid = 0 THEN guestcost
+ELSE membercost
+END AS cost
+FROM Bookings
+JOIN Members USING(memid)
+JOIN Facilities USING(facid)
+WHERE DATE(Bookings.starttime) = '2012-09-14'
+	  AND ((memid = 0 AND guestcost > 30)
+	  OR   (memid != 0 AND membercost > 30))
+ORDER BY cost DESC;
+
+
+
+
+
 /* Q9: This time, produce the same result as in Q8, but using a subquery. */
+
+
+ANSWER 9:
+
+--Challenged self to not use any joins. Couldn't think of clean ways
+--Code limited for same reasons as above
+
+SELECT
+(SELECT firstname
+ FROM Members
+ WHERE Bookings.memid = Members.memid) AS first_name,
+(SELECT surname
+ FROM Members
+ WHERE Bookings.memid = Members.memid) AS surname,
+(SELECT name
+ FROM Facilities
+ WHERE Bookings.facid = Facilities.facid) AS facility,
+(SELECT guestcost
+ FROM Facilities
+ WHERE guestcost > 30 AND Bookings.facid = Facilities.facid) as guest_cost
+FROM Bookings
+WHERE DATE(Bookings.starttime) = '2012-09-14';
+
+
 
 
 /* PART 2: SQLite
