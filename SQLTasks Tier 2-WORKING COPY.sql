@@ -186,19 +186,16 @@ SELECT CONCAT(firstname, surname) AS member_full_name, Facilities.name AS facili
 CASE WHEN memid = 0 THEN 'guest'
 ELSE 'member'
 END AS person_type,
-CASE WHEN memid = 0 THEN guestcost
-ELSE membercost
-END AS cost
+CASE WHEN memid = 0 THEN guestcost*slots
+ELSE membercost*slots
+END AS total_cost
 FROM Bookings
 JOIN Members USING(memid)
 JOIN Facilities USING(facid)
 WHERE DATE(Bookings.starttime) = '2012-09-14'
-	  AND ((memid = 0 AND guestcost > 30)
-	  OR   (memid != 0 AND membercost > 30))
+	  AND ((memid = 0 AND guestcost*slots > 30)
+	  OR   (memid != 0 AND membercost*slots > 30))
 ORDER BY cost DESC;
-
---NOTE - really dont need the last piece to check for places where the member cost is > $30 because there ARE NO cases where the facility cost for members is ever over 30, or even close to 30! highest is < $10
---Also, the only thing that even costs guest over 30 are the Massage Rooms
 
 --Again errors with this^. Modified to work:
 
@@ -206,15 +203,15 @@ SELECT firstname, surname, Facilities.name AS facility,
 CASE WHEN memid = 0 THEN 'guest'
 ELSE 'member'
 END AS person_type,
-CASE WHEN memid = 0 THEN guestcost
-ELSE membercost
-END AS cost
+CASE WHEN memid = 0 THEN guestcost*slots
+ELSE membercost*slots
+END AS total_cost
 FROM Bookings
 JOIN Members USING(memid)
 JOIN Facilities USING(facid)
 WHERE DATE(Bookings.starttime) = '2012-09-14'
-	  AND ((memid = 0 AND guestcost > 30)
-	  OR   (memid != 0 AND membercost > 30))
+	  AND ((memid = 0 AND guestcost*slots > 30)
+	  OR   (memid != 0 AND membercost*slots > 30))
 ORDER BY cost DESC;
 
 
@@ -258,11 +255,65 @@ QUESTIONS:
 The output of facility name and total revenue, sorted by revenue. Remember
 that there's a different cost for guests and members! */
 
+
+ANSWER 10:
+
+SELECT facility, SUM(total_cost) AS revenue FROM
+(SELECT firstname, surname, Facilities.name AS facility,
+CASE WHEN memid = 0 THEN "guest"ELSE "member" END AS person_type,
+CASE WHEN memid = 0 THEN guestcost*slots ELSE membercost*slots END AS total_cost)
+FROM Bookings
+JOIN Members USING(memid)
+JOIN Facilities USING(facid)) AS total_cost_per_booking
+GROUP BY facility HAVING SUM(total_cost) < 1000
+ORDER BY SUM(total_cost) DESC;
+
+
+
+
 /* Q11: Produce a report of members and who recommended them in alphabetic surname,firstname order */
 
 
-/* Q12: Find the facilities with their usage by member, but not guests */
+ANSWER 11:
+
+SELECT m1.firstname, m1.surname, m2.firstname AS recommendedby_firstname, m2.surname
+AS recommendedby_surname
+FROM Members AS m1
+JOIN Members AS m2
+ON m1.recommendedby = m2.memid
+WHERE m1.recommendedby !='';
 
 
-/* Q13: Find the facilities usage by month, but not guests */
+
+/* Q12: Find the facilities with their usage by members, but not guests */
+
+
+ANSWER 12:
+
+SELECT name AS facility, SUM(slots) AS member_bookings
+FROM Bookings
+JOIN Facilities
+USING(facid)
+WHERE memid !=0
+GROUP BY facility
+ORDER BY SUM(slots) DESC;
+
+
+
+
+/* Q13: Find the facilities usage by month, by members only, not guests */
+
+
+ANSWER 13:
+
+SELECT name AS facility, EXTRACT(MONTH FROM starttime) AS month, SUM(slots) AS guest_bookings
+FROM Bookings
+JOIN Facilities
+USING(facid)
+WHERE memid = 0
+GROUP BY facility, month
+ORDER BY month, SUM(slots) DESC;
+
+
+
 
