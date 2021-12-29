@@ -258,30 +258,48 @@ that there's a different cost for guests and members! */
 
 ANSWER 10:
 
-SELECT facility, SUM(total_cost) AS revenue FROM
-(SELECT firstname, surname, Facilities.name AS facility,
-CASE WHEN memid = 0 THEN "guest"ELSE "member" END AS person_type,
-CASE WHEN memid = 0 THEN guestcost*slots ELSE membercost*slots END AS total_cost)
-FROM Bookings
-JOIN Members USING(memid)
-JOIN Facilities USING(facid)) AS total_cost_per_booking
-GROUP BY facility HAVING SUM(total_cost) < 1000
-ORDER BY SUM(total_cost) DESC;
+import pandas as pd
+import sqlite3 as sql
+countryclub_db = 'sqlite_db_pythonsqlite.db'
+connection = sql.connect(countryclub_db)
+query = 'SELECT facility, SUM(total_cost) AS revenue FROM (SELECT firstname, surname, Facilities.name AS facility, CASE WHEN memid = 0 THEN "guest"ELSE "member" END AS person_type, CASE WHEN memid = 0 THEN guestcost*slots ELSE membercost*slots END AS total_cost FROM Bookings JOIN Members USING(memid) JOIN Facilities USING(facid)) AS total_cost_per_booking GROUP BY facility HAVING SUM(total_cost) < 1000 ORDER BY SUM(total_cost) DESC'
+df = pd.read_sql_query(query, connection)
+df
+
+#query:
+# SELECT facility, SUM(total_cost) AS revenue
+# FROM
+# (SELECT firstname, surname, Facilities.name AS facility, CASE WHEN memid = 0 THEN "guest"
+# ELSE "member" END AS person_type,
+# CASE WHEN memid = 0 THEN guestcost*slots
+# ELSE membercost*slots END AS total_cost
+# FROM Bookings
+# JOIN Members USING(memid)
+# JOIN Facilities USING(facid)) AS total_cost_per_booking
+# GROUP BY facility HAVING SUM(total_cost) < 1000 ORDER BY SUM(total_cost) DESC
 
 
 
 
-/* Q11: Produce a report of members and who recommended them in alphabetic surname,firstname order */
+/* Q11: Produce a report of members and who recommended them in alphabetic surname, firstname order */
 
 
 ANSWER 11:
 
-SELECT m1.firstname, m1.surname, m2.firstname AS recommendedby_firstname, m2.surname
-AS recommendedby_surname
-FROM Members AS m1
-JOIN Members AS m2
-ON m1.recommendedby = m2.memid
-WHERE m1.recommendedby !='';
+query = 'SELECT m1.firstname, m1.surname, m2.firstname AS recommendedby_firstname, m2.surname AS recommendedby_surname FROM Members AS m1 JOIN Members AS m2 ON m1.recommendedby = m2.memid WHERE m1.recommendedby !="" ORDER BY m1.surname, m1.firstname;'
+
+df = pd.read_sql_query(query, connection)
+df
+
+#query:
+# SELECT m1.firstname, m1.surname, m2.firstname AS recommendedby_firstname, m2.surname
+# AS recommendedby_surname
+# FROM Members AS m1
+# JOIN Members AS m2
+# ON m1.recommendedby = m2.memid
+# WHERE m1.recommendedby !=''
+# ORDER BY surname, firstname;
+
 
 
 
@@ -290,13 +308,18 @@ WHERE m1.recommendedby !='';
 
 ANSWER 12:
 
-SELECT name AS facility, SUM(slots) AS member_bookings
-FROM Bookings
-JOIN Facilities
-USING(facid)
-WHERE memid !=0
-GROUP BY facility
-ORDER BY SUM(slots) DESC;
+query = 'SELECT name AS facility, SUM(slots) AS member_bookings FROM Bookings JOIN Facilities USING(facid) WHERE memid !=0 GROUP BY facility ORDER BY SUM(slots) DESC;'
+df = pd.read_sql_query(query, connection)
+df
+
+#query:
+# SELECT name AS facility, SUM(slots) AS member_bookings
+# FROM Bookings
+# JOIN Facilities
+# USING(facid)
+# WHERE memid !=0
+# GROUP BY facility
+# ORDER BY SUM(slots) DESC;
 
 
 
@@ -306,13 +329,21 @@ ORDER BY SUM(slots) DESC;
 
 ANSWER 13:
 
-SELECT name AS facility, EXTRACT(MONTH FROM starttime) AS month, SUM(slots) AS guest_bookings
-FROM Bookings
-JOIN Facilities
-USING(facid)
-WHERE memid = 0
-GROUP BY facility, month
-ORDER BY month, SUM(slots) DESC;
+query = 'SELECT name AS facility, strftime("%m", starttime) AS month, SUM(slots) AS guest_bookings FROM Bookings JOIN Facilities USING(facid) WHERE memid = 0 GROUP BY facility, month ORDER BY month, SUM(slots) DESC;'
+
+df = pd.read_sql_query(query, connection)
+df
+
+# query:
+# SELECT name AS facility, EXTRACT(MONTH FROM starttime) AS month, SUM(slots) AS guest_bookings
+# /* NOTE - in python/jupyter we can't use EXTRACT for some reason, at least not in this way,
+# so have to use something like "strftime("%m", starttime)" instead, used above 
+# FROM Bookings
+# JOIN Facilities
+# USING(facid)
+# WHERE memid = 0
+# GROUP BY facility, month
+# ORDER BY month, SUM(slots) DESC;
 
 
 
